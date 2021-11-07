@@ -1,1 +1,3 @@
-# SQL_Data-Science_projects
+# SQL Data Science projects
+
+## Data Science projects realized with SQL
