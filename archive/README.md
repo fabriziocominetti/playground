@@ -2,6 +2,6 @@
 
 Basic and introductory exploratory data analysis with SQL and SQLite.
 
-_Medium_ article:
+-- Project status: [Completed]
 
-https://medium.com/dataseries exploring-hot-100-billboards-weekly-charts-with-sql-c6f832a50ca8
+[Medium article](https://medium.com/dataseriesexploring-hot-100-billboards-weekly-charts-with-sql-c6f832a50ca8)
