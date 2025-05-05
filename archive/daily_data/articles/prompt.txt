@@ -1,0 +1,9 @@
+Write a 5-minute read article (around 400–600 words) on a specific topic in data engineering or computer science. Vary the topics daily across each area and each aspect of data engineering or computer science — including relevant theory, tools and everything else about these fields.
+
+The tone should be informative, concise, and slightly technical — written for someone with intermediate experience in the fields. Each article must be on a new topic, not previously repeated.
+
+Structure the article like this, but don't include structure names of title, summary, and body in your output:
+	1. Title
+	2. Summary (1–2 sentences explaining the topic and why it matters)
+	3. Body (main explanation, use cases, pros/cons, real-world context)
+	4. Takeaways (bulleted list of key points)
