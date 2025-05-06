@@ -5,7 +5,7 @@ tags: [functional, object-oriented, Python, SQL]
 
 ## Functional Programming: A Paradigm Shift for Data Engineers
 
-_Functional programming (FP) is a programming paradigm centered around the use of pure functions, immutability, and declarative logic. For data engineers, adopting functional programming concepts can lead to more predictable, maintainable, and parallelizable data pipelines — especially as systems grow in complexity._
+Functional programming (FP) is a programming paradigm centered around the use of pure functions, immutability, and declarative logic. For data engineers, adopting functional programming concepts can lead to more predictable, maintainable, and parallelizable data pipelines — especially as systems grow in complexity.
 
 At its core, functional programming avoids mutable state and side effects. Functions are designed to always return the same output given the same input, without altering external data or relying on global state. Languages like Haskell, Clojure, and Scala embrace FP fully, while others like Python, Java, and JavaScript offer hybrid functional features. In the context of data engineering, functional principles shine when processing large datasets, transforming data streams, or designing distributed systems.
 
@@ -27,7 +27,7 @@ Takeaways
 
 ## Object-Oriented Programming: Structuring Data Engineering Projects
 
-_Object-oriented programming (OOP) is a foundational paradigm that organizes software design around objects — self-contained units that bundle data (attributes) and behaviors (methods). For data engineers, understanding OOP can significantly improve the maintainability, scalability, and clarity of complex data systems._
+Object-oriented programming (OOP) is a foundational paradigm that organizes software design around objects — self-contained units that bundle data (attributes) and behaviors (methods). For data engineers, understanding OOP can significantly improve the maintainability, scalability, and clarity of complex data systems.
 
 At its heart, OOP uses four key principles: **encapsulation**, **inheritance**, **polymorphism**, and **abstraction**. Encapsulation means that each object manages its own state and exposes only necessary interfaces, reducing unintended interference between components. Inheritance allows new classes to extend existing ones, promoting code reuse. Polymorphism enables different objects to be used interchangeably if they share a common interface, and abstraction simplifies complex systems by hiding unnecessary details.
 

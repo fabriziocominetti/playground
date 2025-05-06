@@ -5,7 +5,7 @@ tags: [APIs (REST, GraphQL, gRPC, OpenAPI), CI/CD, networking (TCP/IP, HTTP/HTTP
 
 ## Mastering Cron Jobs for Automated Data Engineering Tasks
 
-_Cron jobs are a classic yet essential tool for scheduling automated tasks in Unix-like systems — a key capability for data engineers managing pipelines, reports, and system maintenance. Despite being decades old, cron remains widely used because of its simplicity, reliability, and flexibility._
+Cron jobs are a classic yet essential tool for scheduling automated tasks in Unix-like systems — a key capability for data engineers managing pipelines, reports, and system maintenance. Despite being decades old, cron remains widely used because of its simplicity, reliability, and flexibility.
 
 A cron job is essentially a time-based scheduler: it runs specified commands or scripts at defined intervals, using the cron daemon. The scheduling syntax, while compact, can handle complex patterns — from running a task every minute, to once a month, to every weekday at midnight. For data engineers, cron jobs are invaluable for automating ETL tasks, triggering data quality checks, sending alerts, or rotating log files.
 

@@ -5,7 +5,7 @@ tags: [containers and virtualization (Docker, Kubernetes), monitoring and loggin
 
 ## The Role of Containers and Virtualization in Modern Data Engineering
 
-_Containers and virtualization are two foundational technologies reshaping how data engineers build, deploy, and scale modern data systems. Understanding how they work and when to use each is crucial for optimizing performance, flexibility, and resource efficiency._
+Containers and virtualization are two foundational technologies reshaping how data engineers build, deploy, and scale modern data systems. Understanding how they work and when to use each is crucial for optimizing performance, flexibility, and resource efficiency.
 
 Virtualization involves creating virtual machines (VMs) that emulate entire hardware systems, allowing multiple operating systems to run on a single physical machine. This has been widely used in enterprise data centers for over a decade, enabling better server utilization, isolation, and easier disaster recovery. Each VM runs its own OS, which makes it heavier in resource usage but provides strong isolation.
 
@@ -29,7 +29,7 @@ Takeaways
 
 ## Docker: Revolutionizing Application Deployment in Data Engineering
 
-_Docker is a containerization platform that has transformed how data engineers and developers build, ship, and run applications. By packaging applications and their dependencies into lightweight, portable containers, Docker ensures consistency across development, testing, and production environments — a critical advantage for modern data engineering workflows._
+Docker is a containerization platform that has transformed how data engineers and developers build, ship, and run applications. By packaging applications and their dependencies into lightweight, portable containers, Docker ensures consistency across development, testing, and production environments — a critical advantage for modern data engineering workflows.
 
 At its core, Docker uses a layered file system and the host operating system’s kernel to run isolated application processes. Each Docker container is created from an image, which defines everything the application needs: code, runtime, libraries, environment variables, and configuration files. This abstraction means that if a Docker image works on your laptop, it will work the same way on a cloud server or in a CI/CD pipeline, eliminating the notorious “it works on my machine” problem.
 
@@ -51,7 +51,7 @@ Takeaways
 
 ## Kubernetes: Orchestrating Containers at Scale in Data Engineering
 
-_Kubernetes is an open-source container orchestration platform designed to manage the deployment, scaling, and operation of containerized applications. For data engineers working with complex pipelines or large-scale data systems, Kubernetes provides the automation and resilience needed to keep everything running smoothly across distributed environments._
+Kubernetes is an open-source container orchestration platform designed to manage the deployment, scaling, and operation of containerized applications. For data engineers working with complex pipelines or large-scale data systems, Kubernetes provides the automation and resilience needed to keep everything running smoothly across distributed environments.
 
 While Docker handles the creation and running of individual containers, Kubernetes (often abbreviated as K8s) manages clusters of containers across multiple machines. It abstracts away the underlying infrastructure and offers features like automated load balancing, rolling updates, service discovery, and self-healing (restarting failed containers). This is especially valuable when running microservices architectures or distributed data processing workloads, where maintaining availability and scaling efficiently can be challenging.
 
