@@ -30,7 +30,7 @@
 
 - **Libraries**
 
-[data manipulation (Pandas, PySpark, PyArrow), data viz (Streamlit), notebooks (colab, jupyter)]
+[data manipulation (Pandas, Polars, PySpark, PyArrow), data viz (Streamlit), notebooks (colab, jupyter)]
 
 - **Machine Learning**
 
@@ -47,23 +47,3 @@
 - **Tools**
 
 [Confluence, DBeaver, dbt, Jira]
-
-## STRUCTURE
-
-_(theory + lab)_
-
-```
-/articles
-    /ai
-    /computer-science
-    /cloud
-    /data-management
-    /databases-dbms
-    /data-engineering
-    /infrastructure
-    /libraries
-    /ml
-    /programming
-    /security
-    /tools
-```

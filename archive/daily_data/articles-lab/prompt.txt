@@ -1,7 +1,0 @@
-Write a 5-minute read article (around 400–600 words) on a specific topic in data engineering or computer science. V$
-
-The article should be seen like a lab article, with real examples. The tone should be informative, concise, and tec$
-
-Structure the article like this, but don't include structure names of title, summary, and body in your output:
-        1. Title
-        2. Body
