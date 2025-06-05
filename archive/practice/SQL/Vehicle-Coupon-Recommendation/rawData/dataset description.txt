@@ -1,0 +1,14 @@
+Link: https://archive.ics.uci.edu/ml/datasets/in-vehicle+coupon+recommendation#
+
+Abstract: This data studies whether a person will accept the coupon recommended to him in different driving scenarios
+	
+
+Data Set Characteristics: Multivariate
+Number of Instances: 12684
+Area: Business
+Attribute Characteristics: N/A
+Number of Attributes: 23
+Date Donated: 2020-09-15
+Associated Tasks: Classification
+Missing Values? Yes
+Number of Web Hits: 62490

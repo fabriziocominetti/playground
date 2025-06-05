@@ -1,0 +1,23 @@
+1. Open Ubuntu
+
+wget https://raw.githubusercontent.com/fabriziocominetti/practice/main/shell-f1/data/f1_T2021.csv
+
+ls
+
+less f1_T2021.csv
+
+grep Mercedes f1_T2021.csv
+
+grep 11 f1_T2021.csv
+
+grep ^11 f1_T2021.csv
+
+grep 5$ f1_T2021.csv
+
+sort f1_T2021.csv
+
+sort -n f1_T2021.csv
+
+tail -21 f1_T2021.csv | sort -t, -k 2
+
+wc -l f1_T2021.csv
