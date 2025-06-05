@@ -1,0 +1,6 @@
+prefect
+requests
+pandas
+pyarrow
+duckdb
+python-dotenv
