@@ -1,0 +1,484 @@
+"""
+Simulatore di Campionato di Calcio (MVP)
+----------------------------------------
+Requisiti: Python 3.9+
+Librerie: solo standard library (tkinter/ttk)
+
+Funzionalità incluse:
+- UI di setup: 20 squadre con nome e valore (rating)
+- Creazione calendario doppio girone all'italiana (andata/ritorno)
+- Visualizzazione giornata corrente con risultati e stato (da giocare/giocata)
+- Navigazione giornate (precedente/successiva)
+- Simulazione: singola partita selezionata, tutta la giornata, oppure tutto il campionato
+- Classifica aggiornata in tempo reale (Pts, PG, V, N, P, GF, GA, DR)
+
+Come eseguire:
+    python simulatore_campionato.py
+"""
+
+from __future__ import annotations
+import math
+import random
+from dataclasses import dataclass, field
+from typing import List, Optional
+import tkinter as tk
+from tkinter import ttk, messagebox, filedialog
+
+# -------------------------------
+# Modello dati
+# -------------------------------
+
+@dataclass
+class Team:
+    name: str
+    rating: int
+    points: int = 0
+    played: int = 0
+    wins: int = 0
+    draws: int = 0
+    losses: int = 0
+    gf: int = 0
+    ga: int = 0
+
+    @property
+    def gd(self) -> int:
+        return self.gf - self.ga
+
+    def reset_stats(self):
+        self.points = 0
+        self.played = 0
+        self.wins = 0
+        self.draws = 0
+        self.losses = 0
+        self.gf = 0
+        self.ga = 0
+
+@dataclass
+class Match:
+    home: Team
+    away: Team
+    goals_home: Optional[int] = None
+    goals_away: Optional[int] = None
+
+    @property
+    def played(self) -> bool:
+        return self.goals_home is not None and self.goals_away is not None
+
+    def result_text(self) -> str:
+        if self.played:
+            return f"{self.home.name} {self.goals_home} - {self.goals_away} {self.away.name}"
+        return f"{self.home.name} vs {self.away.name}"
+
+# -------------------------------
+# Utility: generazione calendario
+# -------------------------------
+
+def generate_double_round_robin(teams: List[Team]) -> List[List[Match]]:
+    """Genera un calendario andata/ritorno con metodo "circle" (Berger).
+    Ritorna una lista di giornate, ognuna con una lista di Match.
+    """
+    n = len(teams)
+    if n % 2 != 0:
+        teams = teams + [Team("Riposo", 0)]  # non usato qui, ma per completezza
+        n += 1
+    # Copia per non riordinare l'originale
+    rotation = teams[1:]
+    fixed = teams[0]
+
+    rounds_first_leg: List[List[Match]] = []
+    for r in range(n - 1):
+        left = [fixed] + rotation[: (n // 2) - 1]
+        right = rotation[(n // 2) - 1 :]
+        right = list(reversed(right))
+        pairs = list(zip(left, right))
+        # Alterna casa/trasferta per bilanciare
+        round_matches: List[Match] = []
+        for i, (t1, t2) in enumerate(pairs):
+            if r % 2 == 0:
+                home, away = (t1, t2) if i % 2 == 0 else (t2, t1)
+            else:
+                home, away = (t2, t1) if i % 2 == 0 else (t1, t2)
+            round_matches.append(Match(home=home, away=away))
+        rounds_first_leg.append(round_matches)
+        # Rotazione
+        rotation = rotation[1:] + rotation[:1]
+
+    # Seconda parte: inverti casa/trasferta
+    rounds_second_leg: List[List[Match]] = []
+    for giornata in rounds_first_leg:
+        rev = [Match(home=m.away, away=m.home) for m in giornata]
+        rounds_second_leg.append(rev)
+
+    full_schedule = rounds_first_leg + rounds_second_leg
+    return full_schedule
+
+def generate_single_round_robin(teams: List[Team]) -> List[List[Match]]:
+    full_schedule = generate_double_round_robin(teams)[:len(teams)-1]
+    return full_schedule
+
+# -------------------------------
+# Simulazione partite
+# -------------------------------
+
+def poisson_sample(lam: float) -> int:
+    """Campiona da Poisson(lam) via trasformata inversa (senza numpy)."""
+    if lam <= 0:
+        return 0
+    L = math.exp(-lam)
+    k = 0
+    p = 1.0
+    while p > L:
+        k += 1
+        p *= random.random()
+    return k - 1
+
+def expected_goals(r_home: int, r_away: int) -> tuple[float, float]:
+    """Stima xG medi per casa e trasferta in base ai rating.
+    - Base ~2.6 gol totali a partita
+    - Vantaggio casa ~ +10%
+    - Normalizza in funzione dei rating
+    """
+    base_goals = 2.6
+    home_adv = 1.10
+    total = base_goals
+    # Pesi dai rating
+    r_sum = max(1, r_home + r_away)
+    share_home = r_home / r_sum
+    share_away = r_away / r_sum
+    lam_home = total * share_home * home_adv
+    lam_away = total * share_away * (2 - home_adv)  # bilanciamento
+    return lam_home, lam_away
+
+def simulate_match(match: Match):
+    if match.played:
+        return
+    lam_h, lam_a = expected_goals(match.home.rating, match.away.rating)
+    gh = poisson_sample(lam_h)
+    ga = poisson_sample(lam_a)
+    match.goals_home = gh
+    match.goals_away = ga
+    # Aggiorna statistiche
+    h, a = match.home, match.away
+    h.played += 1
+    a.played += 1
+    h.gf += gh; h.ga += ga
+    a.gf += ga; a.ga += gh
+    if gh > ga:
+        h.wins += 1; a.losses += 1
+        h.points += 3
+    elif gh < ga:
+        a.wins += 1; h.losses += 1
+        a.points += 3
+    else:
+        h.draws += 1; a.draws += 1
+        h.points += 1; a.points += 1
+
+# -------------------------------
+# Ordinamento classifica
+# -------------------------------
+
+def standings(teams: List[Team]) -> List[Team]:
+    return sorted(
+        teams,
+        key=lambda t: (t.points, t.gd, t.gf, t.wins, t.rating),
+        reverse=True,
+    )
+
+# -------------------------------
+# UI Tkinter
+# -------------------------------
+
+class SetupFrame(ttk.Frame):
+    def __init__(self, master, on_create_league):
+        super().__init__(master, padding=10)
+        self.on_create_league = on_create_league
+
+        self.name_vars: List[tk.StringVar] = []
+        self.rating_vars: List[tk.StringVar] = []
+
+        self.num_teams_var = tk.IntVar(value=20)
+        self.double_round_var = tk.BooleanVar(value=True)
+
+        self._build_initial()
+
+    def _build_initial(self):
+        # Titolo
+        ttk.Label(self, text="Setup Campionato", font=("Segoe UI", 16, "bold")).grid(row=0, column=0, columnspan=2, pady=(0, 10))
+
+        # Contenitore principale a due colonne
+        self.columnconfigure(0, weight=0)  # colonna sinistra configurazioni
+        self.columnconfigure(1, weight=1)  # colonna destra righe squadre
+
+        # ---------- Colonna sinistra: configurazioni ----------
+        config_frame = ttk.Frame(self)
+        config_frame.grid(row=1, column=0, sticky="nw", padx=(0, 20))
+
+        # Numero squadre
+        ttk.Label(config_frame, text="Numero squadre:", width=20, anchor="w").grid(row=0, column=0, sticky="w", pady=2)
+        ttk.Spinbox(config_frame, from_=8, to=24, textvariable=self.num_teams_var, width=5).grid(row=0, column=1, sticky="w", padx=4, pady=2)
+        ttk.Button(config_frame, text="Conferma", command=self._show_team_entries, width=12).grid(row=1, column=0, columnspan=2, pady=6, sticky="w")
+
+        # Toggle andata/andata-ritorno
+        ttk.Checkbutton(config_frame, text="Andata e ritorno", variable=self.double_round_var).grid(row=2, column=0, columnspan=2, sticky="w", pady=6)
+
+        # Carica da file
+        ttk.Button(config_frame, text="Carica da file", command=self._load_from_file, width=12).grid(row=3, column=0, columnspan=2, sticky="w", pady=6)
+
+        # ---------- Colonna destra: righe squadre ----------
+        self.teams_frame = ttk.Frame(self)
+        self.teams_frame.grid(row=1, column=1, sticky="nw")
+
+    # ---------- Mostra righe team ----------
+    def _show_team_entries(self):
+        for widget in self.teams_frame.winfo_children():
+            widget.destroy()
+        self.name_vars.clear()
+        self.rating_vars.clear()
+
+        n = self.num_teams_var.get()
+        for i in range(n):
+            nv = tk.StringVar(value=f"Squadra {i+1}")
+            rv = tk.StringVar(value=str(60 + (i % 26)))
+            self.name_vars.append(nv)
+            self.rating_vars.append(rv)
+
+            ttk.Entry(self.teams_frame, textvariable=nv, width=25).grid(row=i, column=0, padx=(0,10), pady=2, sticky="w")
+            ttk.Entry(self.teams_frame, textvariable=rv, width=8).grid(row=i, column=1, padx=(0,10), pady=2, sticky="w")
+
+        # Pulsante crea campionato
+        ttk.Button(self.teams_frame, text="Crea Campionato", command=self._create, width=20).grid(row=n, column=0, columnspan=2, pady=12, sticky="w")
+
+    # ---------- Crea campionato ----------
+    def _create(self):
+        teams: List[Team] = []
+        for nv, rv in zip(self.name_vars, self.rating_vars):
+            name = nv.get().strip()
+            try:
+                rating = int(rv.get())
+            except ValueError:
+                messagebox.showerror("Errore", f"Rating non valido per '{name}'.")
+                return
+            rating = max(1, min(99, rating))
+            if not name:
+                messagebox.showerror("Errore", "Tutte le squadre devono avere un nome.")
+                return
+            teams.append(Team(name=name, rating=rating))
+        self.on_create_league(teams, self.double_round_var.get())
+
+    # ---------- Carica da file ----------
+    def _load_from_file(self):
+        path = tk.filedialog.askopenfilename(
+            title="Seleziona file CSV",
+            filetypes=[("CSV files", "*.csv"), ("Text files", "*.txt")]
+        )
+        if not path:
+            return
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                lines = [line.strip() for line in f if line.strip()]
+
+            if len(lines) < 2:
+                messagebox.showerror("Errore", "Il file deve contenere almeno un header e una squadra.")
+                return
+
+            # Ignora header
+            lines = lines[1:]
+            self.num_teams_var.set(len(lines))
+            self._show_team_entries()
+
+            for i, line in enumerate(lines):
+                parts = line.split(",")
+                if len(parts) < 2:
+                    messagebox.showerror("Errore", f"Riga {i+2} non valida: '{line}'")
+                    return
+                name, rating = parts[0].strip(), parts[1].strip()
+                self.name_vars[i].set(name)
+                self.rating_vars[i].set(rating)
+
+        except Exception as e:
+            messagebox.showerror("Errore", f"Impossibile leggere il file:\n{e}")
+
+class LeagueFrame(ttk.Frame):
+    def __init__(self, master, teams: List[Team], double_round: bool = True):
+        super().__init__(master)
+        self.teams = teams
+        if double_round:
+            self.schedule = generate_double_round_robin(self.teams)
+        else:
+            self.schedule = generate_single_round_robin(self.teams)
+        self.current_round = 0
+        self._build()
+        self._refresh_all()
+
+    # ---------- UI ----------
+    def _build(self):
+        # Header con navigazione giornate
+        header = ttk.Frame(self)
+        header.pack(fill="x", pady=6)
+        self.round_label = ttk.Label(header, text="Giornata 1", font=("Segoe UI", 14, "bold"))
+        self.round_label.pack(side="left", padx=8)
+
+        ttk.Button(header, text="⟵ Giornata prec.", command=self._prev_round).pack(side="left", padx=4)
+        ttk.Button(header, text="Giornata succ. ⟶", command=self._next_round).pack(side="left", padx=4)
+        ttk.Button(header, text="Simula partita selezionata", command=self._simulate_selected).pack(side="right", padx=4)
+        ttk.Button(header, text="Simula giornata", command=self._simulate_round).pack(side="right", padx=4)
+        ttk.Button(header, text="Simula tutto", command=self._simulate_all).pack(side="right", padx=4)
+
+        body = ttk.Frame(self)
+        body.pack(fill="both", expand=True)
+
+        # Colonna sinistra: calendario giornata
+        left = ttk.Frame(body)
+        left.pack(side="left", fill="both", expand=True, padx=(8, 4))
+        ttk.Label(left, text="Partite della giornata").pack(anchor="w")
+
+        self.matches_tv = ttk.Treeview(left, columns=("Casa", "Ris", "Trasferta", "Stato"), show="headings", selectmode="browse")
+        for col, w in zip(("Casa", "Ris", "Trasferta", "Stato"), (160, 80, 160, 100)):
+            self.matches_tv.heading(col, text=col)
+            self.matches_tv.column(col, width=w, anchor="center")
+        self.matches_tv.pack(fill="both", expand=True, pady=4)
+
+        # Colonna destra: classifica
+        right = ttk.Frame(body)
+        right.pack(side="right", fill="both", expand=True, padx=(4, 8))
+        ttk.Label(right, text="Classifica").pack(anchor="w")
+
+        self.table_tv = ttk.Treeview(
+            right,
+            columns=("Pos", "Squadra", "Pts", "PG", "V", "N", "P", "GF", "GA", "DR"),
+            show="headings",
+            selectmode="none",
+        )
+        widths = (50, 160, 60, 50, 50, 50, 50, 60, 60, 60)
+        headers = ("Pos", "Squadra", "Pts", "PG", "V", "N", "P", "GF", "GA", "DR")
+        for col, w in zip(headers, widths):
+            self.table_tv.heading(col, text=col)
+            anchor = "w" if col == "Squadra" else "center"
+            self.table_tv.column(col, width=w, anchor=anchor)
+        self.table_tv.pack(fill="both", expand=True, pady=4)
+
+    # ---------- Logica UI ----------
+    def _refresh_all(self):
+        self._refresh_round_label()
+        self._populate_matches()
+        self._populate_table()
+
+    def _refresh_round_label(self):
+        tot = len(self.schedule)
+        self.round_label.configure(text=f"Giornata {self.current_round + 1} / {tot}")
+
+    def _populate_matches(self):
+        self.matches_tv.delete(*self.matches_tv.get_children())
+        giornata = self.schedule[self.current_round]
+        for idx, m in enumerate(giornata):
+            stato = "Giocata" if m.played else "Da giocare"
+            ris = f"{m.goals_home}-{m.goals_away}" if m.played else "-"
+            self.matches_tv.insert("", "end", iid=str(idx), values=(m.home.name, ris, m.away.name, stato))
+
+    def _populate_table(self):
+        self.table_tv.delete(*self.table_tv.get_children())
+        for pos, t in enumerate(standings(self.teams), start=1):
+            self.table_tv.insert(
+                "",
+                "end",
+                values=(pos, t.name, t.points, t.played, t.wins, t.draws, t.losses, t.gf, t.ga, t.gd),
+            )
+
+    def _prev_round(self):
+        if self.current_round > 0:
+            self.current_round -= 1
+            self._refresh_all()
+
+    def _next_round(self):
+        if self.current_round < len(self.schedule) - 1:
+            self.current_round += 1
+            self._refresh_all()
+
+    def _simulate_selected(self):
+        sel = self.matches_tv.selection()
+        if not sel:
+            messagebox.showinfo("Info", "Seleziona una partita dalla lista.")
+            return
+        idx = int(sel[0])
+        match = self.schedule[self.current_round][idx]
+        if match.played:
+            messagebox.showinfo("Info", "Questa partita è già stata simulata.")
+            return
+        simulate_match(match)
+        self._populate_matches()
+        self._populate_table()
+
+        # Seleziona automaticamente la prossima partita non giocata
+        giornata = self.schedule[self.current_round]
+        for i, m in enumerate(giornata):
+            if not m.played:
+                self.matches_tv.selection_set(str(i))
+                self.matches_tv.see(str(i))
+                break
+
+    def _simulate_round(self):
+        tot_rounds = len(self.schedule)
+        
+        # Trova la prossima giornata con partite da giocare
+        while self.current_round < tot_rounds:
+            giornata = self.schedule[self.current_round]
+            to_play = [m for m in giornata if not m.played]
+            if not to_play:
+                self.current_round += 1
+                continue
+            # Simula tutte le partite della giornata corrente
+            for m in to_play:
+                simulate_match(m)
+            self._refresh_all()  # aggiorna calendario + classifica
+
+            # Dopo aver simulato, spostati automaticamente alla prossima giornata da giocare
+            next_round = self.current_round + 1
+            while next_round < tot_rounds and all(m.played for m in self.schedule[next_round]):
+                next_round += 1
+            if next_round < tot_rounds:
+                self.current_round = next_round
+            else:
+                # Se non ci sono più giornate da giocare, resta sull'ultima
+                self.current_round = tot_rounds - 1
+            self._refresh_all()
+            break  # Simulata una giornata, esci
+
+
+    def _simulate_all(self):
+        for giornata in self.schedule:
+            for m in giornata:
+                if not m.played:
+                    simulate_match(m)
+        self._refresh_all()
+        messagebox.showinfo("Fine", "Campionato simulato completamente!")
+
+# -------------------------------
+# App principale
+# -------------------------------
+
+class App(tk.Tk):
+    def __init__(self):
+        super().__init__()
+        self.title("Simulatore Campionato di Calcio")
+        self.geometry("1000x640")
+        try:
+            self.iconbitmap(default="")  # ignorato su molte piattaforme, placeholder
+        except Exception:
+            pass
+        self._show_setup()
+
+    def _show_setup(self):
+        for w in self.winfo_children():
+            w.destroy()
+        SetupFrame(self, self._create_league).pack(fill="both", expand=True, padx=8, pady=8)
+
+    def _create_league(self, teams: List[Team], double_round: bool):
+        for t in teams:
+            t.reset_stats()
+        for w in self.winfo_children():
+            w.destroy()
+        LeagueFrame(self, teams, double_round=double_round).pack(fill="both", expand=True)
+
+if __name__ == "__main__":
+    random.seed()  # inizializza da sistema
+    App().mainloop()
