@@ -190,113 +190,174 @@ def standings(teams: List[Team]) -> List[Team]:
 
 class SetupFrame(ttk.Frame):
     def __init__(self, master, on_create_league):
-        super().__init__(master, padding=10)
+        super().__init__(master)
         self.on_create_league = on_create_league
-
-        self.name_vars: List[tk.StringVar] = []
-        self.rating_vars: List[tk.StringVar] = []
 
         self.num_teams_var = tk.IntVar(value=20)
         self.double_round_var = tk.BooleanVar(value=True)
 
-        self._build_initial()
+        self.name_vars = []
+        self.rating_vars = []
 
-    def _build_initial(self):
-        # Titolo
-        ttk.Label(self, text="Setup Campionato", font=("Segoe UI", 16, "bold")).grid(row=0, column=0, columnspan=2, pady=(0, 10))
+        self._build_ui()
 
-        # Contenitore principale a due colonne
-        self.columnconfigure(0, weight=0)  # colonna sinistra configurazioni
-        self.columnconfigure(1, weight=1)  # colonna destra righe squadre
+    def _build_ui(self):
+        # Configura griglia principale (25% - 75%)
+        self.columnconfigure(0, weight=1, uniform="cols")
+        self.columnconfigure(1, weight=3, uniform="cols")
 
-        # ---------- Colonna sinistra: configurazioni ----------
-        config_frame = ttk.Frame(self)
-        config_frame.grid(row=1, column=0, sticky="nw", padx=(0, 20))
+        # ==== Colonna sinistra (configurazione) ====
+        config_frame = ttk.LabelFrame(self, text="Configurazione")
+        config_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
 
-        # Numero squadre
-        ttk.Label(config_frame, text="Numero squadre:", width=20, anchor="w").grid(row=0, column=0, sticky="w", pady=2)
-        ttk.Spinbox(config_frame, from_=8, to=24, textvariable=self.num_teams_var, width=5).grid(row=0, column=1, sticky="w", padx=4, pady=2)
-        ttk.Button(config_frame, text="Conferma", command=self._show_team_entries, width=12).grid(row=1, column=0, columnspan=2, pady=6, sticky="w")
+        ttk.Label(config_frame, text="Numero squadre:").grid(row=0, column=0, sticky="w", pady=4)
 
-        # Toggle andata/andata-ritorno
-        ttk.Checkbutton(config_frame, text="Andata e ritorno", variable=self.double_round_var).grid(row=2, column=0, columnspan=2, sticky="w", pady=6)
+        # Spinbox con soli numeri pari
+        self.num_spinbox = ttk.Spinbox(
+            config_frame,
+            from_=8,
+            to=24,
+            increment=2,
+            textvariable=self.num_teams_var,
+            width=5
+        )
+        self.num_spinbox.grid(row=0, column=1, sticky="w", pady=4)
 
-        # Carica da file
-        ttk.Button(config_frame, text="Carica da file", command=self._load_from_file, width=12).grid(row=3, column=0, columnspan=2, sticky="w", pady=6)
+        # Toggle andata e ritorno
+        ttk.Checkbutton(config_frame, text="Andata e ritorno", variable=self.double_round_var).grid(
+            row=1, column=0, columnspan=2, sticky="w", pady=6
+        )
 
-        # ---------- Colonna destra: righe squadre ----------
+        # Frame pulsanti sotto al toggle
+        btn_frame = ttk.Frame(config_frame)
+        btn_frame.grid(row=2, column=0, columnspan=2, sticky="w", pady=6)
+
+        ttk.Button(btn_frame, text="Conferma", command=self._confirm_teams).grid(row=0, column=0, padx=(0,5))
+        ttk.Button(btn_frame, text="Carica da file", command=self._load_from_file).grid(row=0, column=1)
+
+        # ==== Colonna destra (squadre) ====
         self.teams_frame = ttk.Frame(self)
-        self.teams_frame.grid(row=1, column=1, sticky="nw")
+        self.teams_frame.grid(row=0, column=1, sticky="nsew", padx=10, pady=10)
+        self.teams_frame.columnconfigure(0, weight=3)
+        self.teams_frame.columnconfigure(1, weight=1)
 
-    # ---------- Mostra righe team ----------
-    def _show_team_entries(self):
+    def _confirm_teams(self):
+        n = int(self.num_teams_var.get())
+        # protezione: assicurati che sia pari
+        if n % 2 != 0:
+            messagebox.showerror("Errore", "Il numero di squadre deve essere pari.")
+            return
+        self._show_team_entries(n)
+
+    def _show_team_entries(self, n):
+        # pulisci frame squadre
         for widget in self.teams_frame.winfo_children():
             widget.destroy()
+
         self.name_vars.clear()
         self.rating_vars.clear()
 
-        n = self.num_teams_var.get()
+        # Genera righe squadre
         for i in range(n):
             nv = tk.StringVar(value=f"Squadra {i+1}")
-            rv = tk.StringVar(value=str(60 + (i % 26)))
+            rv = tk.StringVar(value=str(60 + (i % 20)))
             self.name_vars.append(nv)
             self.rating_vars.append(rv)
 
-            ttk.Entry(self.teams_frame, textvariable=nv, width=25).grid(row=i, column=0, padx=(0,10), pady=2, sticky="w")
-            ttk.Entry(self.teams_frame, textvariable=rv, width=8).grid(row=i, column=1, padx=(0,10), pady=2, sticky="w")
+            ttk.Entry(self.teams_frame, textvariable=nv, width=25).grid(row=i, column=0, padx=4, pady=2, sticky="we")
+            ttk.Entry(self.teams_frame, textvariable=rv, width=8).grid(row=i, column=1, padx=4, pady=2, sticky="w")
 
-        # Pulsante crea campionato
-        ttk.Button(self.teams_frame, text="Crea Campionato", command=self._create, width=20).grid(row=n, column=0, columnspan=2, pady=12, sticky="w")
+        # Pulsante Crea Campionato sotto le righe
+        ttk.Button(self.teams_frame, text="Crea Campionato", command=self._create).grid(
+            row=n, column=0, pady=12, sticky="we"
+            )
 
-    # ---------- Crea campionato ----------
-    def _create(self):
-        teams: List[Team] = []
-        for nv, rv in zip(self.name_vars, self.rating_vars):
-            name = nv.get().strip()
-            try:
-                rating = int(rv.get())
-            except ValueError:
-                messagebox.showerror("Errore", f"Rating non valido per '{name}'.")
-                return
-            rating = max(1, min(99, rating))
-            if not name:
-                messagebox.showerror("Errore", "Tutte le squadre devono avere un nome.")
-                return
-            teams.append(Team(name=name, rating=rating))
-        self.on_create_league(teams, self.double_round_var.get())
 
-    # ---------- Carica da file ----------
     def _load_from_file(self):
-        path = tk.filedialog.askopenfilename(
-            title="Seleziona file CSV",
-            filetypes=[("CSV files", "*.csv"), ("Text files", "*.txt")]
-        )
-        if not path:
-            return
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                lines = [line.strip() for line in f if line.strip()]
+        # import locali per evitare dipendenze globali mancanti
+        from tkinter import filedialog
+        import csv
 
-            if len(lines) < 2:
-                messagebox.showerror("Errore", "Il file deve contenere almeno un header e una squadra.")
+        filepath = filedialog.askopenfilename(filetypes=[("CSV Files", "*.csv"), ("Text files", "*.txt")])
+        if not filepath:
+            return
+
+        try:
+            # leggi un campione per sniffing del delimitatore, gestisci BOM con utf-8-sig
+            with open(filepath, "r", encoding="utf-8-sig", newline='') as f:
+                sample = f.read(2048)
+                f.seek(0)
+                try:
+                    dialect = csv.Sniffer().sniff(sample, delimiters=",;")
+                    reader = csv.reader(f, dialect)
+                except Exception:
+                    f.seek(0)
+                    reader = csv.reader(f)
+
+                # ignora header (se presente)
+                # Se il file ha header come "Nome,Rating" la next salta quella riga
+                rows = list(reader)
+
+            if not rows:
+                messagebox.showerror("Errore", "File vuoto o non leggibile.")
                 return
 
-            # Ignora header
-            lines = lines[1:]
-            self.num_teams_var.set(len(lines))
-            self._show_team_entries()
+            # Se la prima riga sembra header (contiene 'nome' o 'rating' testo), scartala
+            first = rows[0]
+            if any(cell.strip().lower() in ("nome", "name", "rating", "valore") for cell in first):
+                rows = rows[1:]
 
-            for i, line in enumerate(lines):
-                parts = line.split(",")
-                if len(parts) < 2:
-                    messagebox.showerror("Errore", f"Riga {i+2} non valida: '{line}'")
-                    return
-                name, rating = parts[0].strip(), parts[1].strip()
-                self.name_vars[i].set(name)
-                self.rating_vars[i].set(rating)
+            # filtra righe vuote
+            parsed = [r for r in rows if r and any(c.strip() for c in r)]
+            if not parsed:
+                messagebox.showerror("Errore", "Nessuna riga squadra valida trovata nel file.")
+                return
+
+            n = len(parsed)
+            # coerenza: richiedi numero pari
+            if n % 2 != 0:
+                messagebox.showerror("Errore", f"Il file contiene {n} squadre (numero dispari). Il campionato richiede un numero pari di squadre.")
+                return
+
+            # aggiorna numero squadre e mostra righe
+            self.num_teams_var.set(n)
+            self._show_team_entries(n)
+
+            # popola le entry con i valori del file (prende le prime 2 colonne)
+            for i, row in enumerate(parsed):
+                name = row[0].strip()
+                rating_txt = row[1].strip() if len(row) > 1 else ""
+                try:
+                    rating = int(rating_txt)
+                except Exception:
+                    rating = 60
+                # safety: controlla che name_vars esista per indice i
+                if i < len(self.name_vars):
+                    self.name_vars[i].set(name)
+                    self.rating_vars[i].set(str(rating))
+
+            # forza aggiornamento UI
+            self.update_idletasks()
 
         except Exception as e:
             messagebox.showerror("Errore", f"Impossibile leggere il file:\n{e}")
+
+    def _create(self):
+        teams = []
+        try:
+            for nv, rv in zip(self.name_vars, self.rating_vars):
+                name = nv.get().strip()
+                rating = int(rv.get())
+                rating = max(1, min(99, rating))
+                if not name:
+                    raise ValueError("Nome squadra vuoto")
+                teams.append(Team(name=name, rating=rating))
+        except Exception as e:
+            messagebox.showerror("Errore", f"Dati squadre non validi: {e}")
+            return
+
+        double_round = self.double_round_var.get()
+        self.on_create_league(teams, double_round)
 
 class LeagueFrame(ttk.Frame):
     def __init__(self, master, teams: List[Team], double_round: bool = True):
