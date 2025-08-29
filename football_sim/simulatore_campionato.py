@@ -1,21 +1,3 @@
-"""
-Simulatore di Campionato di Calcio (MVP)
-----------------------------------------
-Requisiti: Python 3.9+
-Librerie: solo standard library (tkinter/ttk)
-
-Funzionalità incluse:
-- UI di setup: 20 squadre con nome e valore (rating)
-- Creazione calendario doppio girone all'italiana (andata/ritorno)
-- Visualizzazione giornata corrente con risultati e stato (da giocare/giocata)
-- Navigazione giornate (precedente/successiva)
-- Simulazione: singola partita selezionata, tutta la giornata, oppure tutto il campionato
-- Classifica aggiornata in tempo reale (Pts, PG, V, N, P, GF, GA, DR)
-
-Come eseguire:
-    python simulatore_campionato.py
-"""
-
 from __future__ import annotations
 import math
 import random
@@ -149,14 +131,54 @@ def expected_goals(r_home: int, r_away: int) -> tuple[float, float]:
     lam_away = total * share_away * (2 - home_adv)  # bilanciamento
     return lam_home, lam_away
 
+def calculate_rating_probabilities(rating_home: int, rating_away: int) -> tuple[float, float]:
+    """Calcola le probabilità attese di vittoria per casa e trasferta usando sistema di rating."""
+    # Formula: P = 1 / (1 + 10^((Ra - Rb) / 400))
+    # Aggiungiamo un piccolo vantaggio casa (~50 punti Elo)
+    adjusted_home = rating_home + 2
+    diff = adjusted_home - rating_away
+    prob_home = 1 / (1 + 10 ** (-diff / 40))  # Scala ridotta per rating 1-99
+    prob_away = 1 - prob_home
+    return prob_home, prob_away
+
+def update_ratings(home_team: Team, away_team: Team, goals_home: int, goals_away: int, k_factor: float = 5.0):
+    """Aggiorna i rating delle squadre in base al risultato usando sistema di rating dinamico."""
+    # Calcola probabilità attese prima della partita
+    prob_home, prob_away = calculate_rating_probabilities(home_team.rating, away_team.rating)
+    
+    # Determina il risultato effettivo (1 = vittoria, 0.5 = pareggio, 0 = sconfitta)
+    if goals_home > goals_away:
+        result_home = 1.0
+        result_away = 0.0
+    elif goals_home < goals_away:
+        result_home = 0.0
+        result_away = 1.0
+    else:
+        result_home = 0.5
+        result_away = 0.5
+    
+    # Calcola variazioni rating
+    change_home = k_factor * (result_home - prob_home)
+    change_away = k_factor * (result_away - prob_away)
+    
+    # Applica variazioni (mantieni range 1-99)
+    home_team.rating = max(1, min(99, round(home_team.rating + change_home)))
+    away_team.rating = max(1, min(99, round(away_team.rating + change_away)))
+
 def simulate_match(match: Match):
     if match.played:
         return
-    lam_h, lam_a = expected_goals(match.home.rating, match.away.rating)
+    
+    # Salva i rating originali per il calcolo Elo
+    original_home_rating = match.home.rating
+    original_away_rating = match.away.rating
+    
+    lam_h, lam_a = expected_goals(original_home_rating, original_away_rating)
     gh = poisson_sample(lam_h)
     ga = poisson_sample(lam_a)
     match.goals_home = gh
     match.goals_away = ga
+    
     # Aggiorna statistiche
     h, a = match.home, match.away
     h.played += 1
@@ -172,6 +194,9 @@ def simulate_match(match: Match):
     else:
         h.draws += 1; a.draws += 1
         h.points += 1; a.points += 1
+    
+    # Aggiorna rating dinamicamente
+    update_ratings(h, a, gh, ga)
 
 # -------------------------------
 # Ordinamento classifica
@@ -406,12 +431,13 @@ class LeagueFrame(ttk.Frame):
 
         self.table_tv = ttk.Treeview(
             right,
-            columns=("Pos", "Squadra", "Pts", "PG", "V", "N", "P", "GF", "GA", "DR"),
+            columns=("Pos", "Squadra", "Pts", "PG", "V", "N", "P", "GF", "GA", "DR", "Rating"),
             show="headings",
             selectmode="none",
         )
-        widths = (50, 160, 60, 50, 50, 50, 50, 60, 60, 60)
-        headers = ("Pos", "Squadra", "Pts", "PG", "V", "N", "P", "GF", "GA", "DR")
+        widths = (50, 140, 50, 40, 40, 40, 40, 50, 50, 50, 60)
+        headers = ("Pos", "Squadra", "Pts", "PG", "V", "N", "P", "GF", "GA", "DR", "Rating")
+
         for col, w in zip(headers, widths):
             self.table_tv.heading(col, text=col)
             anchor = "w" if col == "Squadra" else "center"
@@ -442,7 +468,7 @@ class LeagueFrame(ttk.Frame):
             self.table_tv.insert(
                 "",
                 "end",
-                values=(pos, t.name, t.points, t.played, t.wins, t.draws, t.losses, t.gf, t.ga, t.gd),
+                values=(pos, t.name, t.points, t.played, t.wins, t.draws, t.losses, t.gf, t.ga, t.gd, t.rating),
             )
 
     def _prev_round(self):
