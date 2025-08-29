@@ -21,10 +21,31 @@ class Team:
     losses: int = 0
     gf: int = 0
     ga: int = 0
+    initial_rating: int = field(init=False)
+    match_history: List[str] = field(default_factory=list)  # "V", "N", "P"
+
+    def __post_init__(self):
+        self.initial_rating = self.rating
 
     @property
     def gd(self) -> int:
         return self.gf - self.ga
+
+    @property
+    def win_percentage(self) -> float:
+        return (self.wins / self.played * 100) if self.played > 0 else 0.0
+
+    @property
+    def avg_goals_for(self) -> float:
+        return (self.gf / self.played) if self.played > 0 else 0.0
+
+    @property
+    def avg_goals_against(self) -> float:
+        return (self.ga / self.played) if self.played > 0 else 0.0
+
+    @property
+    def last_5_form(self) -> str:
+        return "".join(self.match_history[-5:])
 
     def reset_stats(self):
         self.points = 0
@@ -34,6 +55,7 @@ class Team:
         self.losses = 0
         self.gf = 0
         self.ga = 0
+        self.match_history.clear()
 
 @dataclass
 class Match:
@@ -134,14 +156,13 @@ def expected_goals(r_home: int, r_away: int) -> tuple[float, float]:
 def calculate_rating_probabilities(rating_home: int, rating_away: int) -> tuple[float, float]:
     """Calcola le probabilità attese di vittoria per casa e trasferta usando sistema di rating."""
     # Formula: P = 1 / (1 + 10^((Ra - Rb) / 400))
-    # Aggiungiamo un piccolo vantaggio casa (~50 punti Elo)
-    adjusted_home = rating_home + 2
+    adjusted_home = rating_home + 1
     diff = adjusted_home - rating_away
     prob_home = 1 / (1 + 10 ** (-diff / 40))  # Scala ridotta per rating 1-99
     prob_away = 1 - prob_home
     return prob_home, prob_away
 
-def update_ratings(home_team: Team, away_team: Team, goals_home: int, goals_away: int, k_factor: float = 5.0):
+def update_ratings(home_team: Team, away_team: Team, goals_home: int, goals_away: int, k_factor: float = 2.0):
     """Aggiorna i rating delle squadre in base al risultato usando sistema di rating dinamico."""
     # Calcola probabilità attese prima della partita
     prob_home, prob_away = calculate_rating_probabilities(home_team.rating, away_team.rating)
@@ -169,7 +190,7 @@ def simulate_match(match: Match):
     if match.played:
         return
     
-    # Salva i rating originali per il calcolo Elo
+    # Salva i rating originali per il calcolo
     original_home_rating = match.home.rating
     original_away_rating = match.away.rating
     
@@ -185,15 +206,23 @@ def simulate_match(match: Match):
     a.played += 1
     h.gf += gh; h.ga += ga
     a.gf += ga; a.ga += gh
+    
+    # Aggiorna risultati e storico
     if gh > ga:
         h.wins += 1; a.losses += 1
         h.points += 3
+        h.match_history.append("V")
+        a.match_history.append("P")
     elif gh < ga:
         a.wins += 1; h.losses += 1
         a.points += 3
+        h.match_history.append("P")
+        a.match_history.append("V")
     else:
         h.draws += 1; a.draws += 1
         h.points += 1; a.points += 1
+        h.match_history.append("N")
+        a.match_history.append("N")
     
     # Aggiorna rating dinamicamente
     update_ratings(h, a, gh, ga)
@@ -212,6 +241,137 @@ def standings(teams: List[Team]) -> List[Team]:
 # -------------------------------
 # UI Tkinter
 # -------------------------------
+
+class TeamDetailFrame(ttk.Frame):
+    def __init__(self, master, team: Team, schedule: List[List[Match]], on_back):
+        super().__init__(master)
+        self.team = team
+        self.schedule = schedule
+        self.on_back = on_back
+        self._build_ui()
+        self._populate_data()
+
+    def _build_ui(self):
+        # Header con nome squadra e pulsante indietro
+        header = ttk.Frame(self)
+        header.pack(fill="x", pady=10)
+        
+        ttk.Button(header, text="← Torna alla classifica", command=self.on_back).pack(side="left")
+        ttk.Label(header, text=f"Dettaglio: {self.team.name}", 
+                 font=("Segoe UI", 16, "bold")).pack(side="left", padx=20)
+
+        # Frame principale con 3 colonne
+        main_frame = ttk.Frame(self)
+        main_frame.pack(fill="both", expand=True, padx=10)
+        
+        # Colonna 1: Info squadra
+        info_frame = ttk.LabelFrame(main_frame, text="Informazioni Squadra")
+        info_frame.grid(row=0, column=0, sticky="nsew", padx=(0,5), pady=5)
+        
+        self.info_text = tk.Text(info_frame, height=12, width=30, state="disabled")
+        self.info_text.pack(fill="both", expand=True, padx=5, pady=5)
+        
+        # Colonna 2: Ultime partite e forma
+        form_frame = ttk.LabelFrame(main_frame, text="Forma e Ultime Partite")
+        form_frame.grid(row=0, column=1, sticky="nsew", padx=5, pady=5)
+        
+        self.form_text = tk.Text(form_frame, height=12, width=35, state="disabled")
+        self.form_text.pack(fill="both", expand=True, padx=5, pady=5)
+        
+        # Colonna 3: Calendario
+        fixtures_frame = ttk.LabelFrame(main_frame, text="Calendario")
+        fixtures_frame.grid(row=0, column=2, sticky="nsew", padx=(5,0), pady=5)
+        
+        self.fixtures_text = tk.Text(fixtures_frame, height=12, width=35, state="disabled")
+        self.fixtures_text.pack(fill="both", expand=True, padx=5, pady=5)
+        
+        # Configura peso colonne
+        main_frame.columnconfigure(0, weight=1)
+        main_frame.columnconfigure(1, weight=1)
+        main_frame.columnconfigure(2, weight=1)
+        main_frame.rowconfigure(0, weight=1)
+
+    def _populate_data(self):
+        self._populate_info()
+        self._populate_form()
+        self._populate_fixtures()
+
+    def _populate_info(self):
+        self.info_text.configure(state="normal")
+        self.info_text.delete(1.0, tk.END)
+        
+        info = f"""INFORMAZIONI GENERALI
+
+Nome: {self.team.name}
+
+RATING
+Rating iniziale: {self.team.initial_rating}
+Rating attuale: {self.team.rating}
+Variazione: {self.team.rating - self.team.initial_rating:+d}
+
+RECORD GENERALE
+Partite giocate: {self.team.played}
+Vittorie: {self.team.wins}
+Pareggi: {self.team.draws}
+Sconfitte: {self.team.losses}
+
+STATISTICHE AVANZATE
+% Vittorie: {self.team.win_percentage:.1f}%
+Gol fatti (media): {self.team.avg_goals_for:.2f}
+Gol subiti (media): {self.team.avg_goals_against:.2f}
+Differenza reti: {self.team.gd:+d}
+Punti: {self.team.points}"""
+
+        self.info_text.insert(1.0, info)
+        self.info_text.configure(state="disabled")
+
+    def _populate_form(self):
+        self.form_text.configure(state="normal")
+        self.form_text.delete(1.0, tk.END)
+        
+        form = f"""FORMA ATTUALE
+
+Ultime 5 partite: {self.team.last_5_form or "Nessuna"}
+"""
+        
+        # Aggiungi statistiche forma se ha giocato
+        if self.team.played > 0:
+            recent_5 = self.team.match_history[-5:]
+            if recent_5:
+                wins_5 = recent_5.count("V")
+                draws_5 = recent_5.count("N")
+                losses_5 = recent_5.count("P")
+                form += f"""
+FORMA RECENTE (ultime {len(recent_5)})
+Vittorie: {wins_5}
+Pareggi: {draws_5} 
+Sconfitte: {losses_5}
+Punti: {wins_5*3 + draws_5}/15"""
+
+        self.form_text.insert(1.0, form)
+        self.form_text.configure(state="disabled")
+
+    def _populate_fixtures(self):
+        self.fixtures_text.configure(state="normal")
+        self.fixtures_text.delete(1.0, tk.END)
+        
+        fixtures = "CALENDARIO\n\n"
+        
+        # Trova tutte le partite della squadra
+        remaining_matches = []
+        for round_idx, round_matches in enumerate(self.schedule):
+            for match in round_matches:
+                if (match.home == self.team or match.away == self.team) and not match.played:
+                    is_home = match.home == self.team
+                    opponent = match.away if is_home else match.home
+                    location = "Casa" if is_home else "Trasferta"
+                    remaining_matches.append((round_idx + 1, opponent, location))
+        
+        for giornata, opponent, location in remaining_matches:
+            fixtures += f"Giornata {giornata}: vs {opponent.name} ({location})\n"
+
+        self.fixtures_text.insert(1.0, fixtures)
+        self.fixtures_text.configure(state="disabled")
 
 class SetupFrame(ttk.Frame):
     def __init__(self, master, on_create_league):
@@ -385,9 +545,10 @@ class SetupFrame(ttk.Frame):
         self.on_create_league(teams, double_round)
 
 class LeagueFrame(ttk.Frame):
-    def __init__(self, master, teams: List[Team], double_round: bool = True):
+    def __init__(self, master, teams: List[Team], double_round: bool = True, on_show_team_detail=None):
         super().__init__(master)
         self.teams = teams
+        self.on_show_team_detail = on_show_team_detail
         if double_round:
             self.schedule = generate_double_round_robin(self.teams)
         else:
@@ -431,10 +592,12 @@ class LeagueFrame(ttk.Frame):
 
         self.table_tv = ttk.Treeview(
             right,
-            columns=("Pos", "Squadra", "Pts", "PG", "V", "N", "P", "GF", "GA", "DR", "Rating"),
+            columns=("Pos", "Squadra", "Pts", "PG", "V", "N", "P", "GF", "GA", "DR", "Rating", "team_obj"),
             show="headings",
-            selectmode="none",
+            selectmode="browse",
+            displaycolumns=("Pos", "Squadra", "Pts", "PG", "V", "N", "P", "GF", "GA", "DR", "Rating"),  # hides 'team_obj'
         )
+
         widths = (50, 140, 50, 40, 40, 40, 40, 50, 50, 50, 60)
         headers = ("Pos", "Squadra", "Pts", "PG", "V", "N", "P", "GF", "GA", "DR", "Rating")
 
@@ -443,6 +606,8 @@ class LeagueFrame(ttk.Frame):
             anchor = "w" if col == "Squadra" else "center"
             self.table_tv.column(col, width=w, anchor=anchor)
         self.table_tv.pack(fill="both", expand=True, pady=4)
+        # Aggiungi evento doppio click per aprire dettaglio squadra
+        self.table_tv.bind("<Double-1>", self._on_team_double_click)
 
     # ---------- Logica UI ----------
     def _refresh_all(self):
@@ -464,12 +629,35 @@ class LeagueFrame(ttk.Frame):
 
     def _populate_table(self):
         self.table_tv.delete(*self.table_tv.get_children())
-        for pos, t in enumerate(standings(self.teams), start=1):
-            self.table_tv.insert(
+        sorted_teams = standings(self.teams)
+        for pos, t in enumerate(sorted_teams, start=1):
+            # Memorizza la squadra nell'item per il click
+            item_id = self.table_tv.insert(
                 "",
                 "end",
                 values=(pos, t.name, t.points, t.played, t.wins, t.draws, t.losses, t.gf, t.ga, t.gd, t.rating),
             )
+            # Associa la squadra all'ID dell'item
+            self.table_tv.set(item_id, "team_obj", t)
+
+    def _on_team_double_click(self, event):
+        """Gestisce il doppio click su una squadra nella classifica."""
+        selection = self.table_tv.selection()
+        if not selection or not self.on_show_team_detail:
+            return
+        
+        item_id = selection[0]
+        # Trova la squadra dall'indice nella classifica
+        sorted_teams = standings(self.teams)
+        try:
+            # L'item_id corrisponde alla posizione nella classifica (partendo da 0)
+            team_index = int(item_id.replace("I", ""), 16) - 1  # Tkinter usa hex per gli ID
+            # Metodo più robusto: cerca per nome
+            team_name = self.table_tv.item(item_id)["values"][1]  # Nome è la colonna 1
+            selected_team = next(t for t in self.teams if t.name == team_name)
+            self.on_show_team_detail(selected_team)
+        except (ValueError, IndexError, StopIteration):
+            pass
 
     def _prev_round(self):
         if self.current_round > 0:
@@ -548,6 +736,8 @@ class App(tk.Tk):
         super().__init__()
         self.title("Simulatore Campionato di Calcio")
         self.geometry("1000x640")
+        self.current_teams = None
+        self.current_double_round = True
         try:
             self.iconbitmap(default="")  # ignorato su molte piattaforme, placeholder
         except Exception:
@@ -560,11 +750,47 @@ class App(tk.Tk):
         SetupFrame(self, self._create_league).pack(fill="both", expand=True, padx=8, pady=8)
 
     def _create_league(self, teams: List[Team], double_round: bool):
+        self.current_teams = teams
+        self.current_double_round = double_round
         for t in teams:
             t.reset_stats()
         for w in self.winfo_children():
             w.destroy()
-        LeagueFrame(self, teams, double_round=double_round).pack(fill="both", expand=True)
+        LeagueFrame(
+            self, 
+            teams, 
+            double_round=double_round, 
+            on_show_team_detail=self._show_team_detail
+        ).pack(fill="both", expand=True)
+
+    def _show_team_detail(self, team: Team):
+        """Mostra la schermata dettaglio per una squadra specifica."""
+        for w in self.winfo_children():
+            w.destroy()
+        
+        # Ricostruisci il calendario per passarlo al dettaglio
+        if self.current_double_round:
+            schedule = generate_double_round_robin(self.current_teams)
+        else:
+            schedule = generate_single_round_robin(self.current_teams)
+            
+        TeamDetailFrame(
+            self, 
+            team, 
+            schedule, 
+            on_back=self._return_to_league
+        ).pack(fill="both", expand=True)
+
+    def _return_to_league(self):
+        """Torna alla schermata principale del campionato."""
+        for w in self.winfo_children():
+            w.destroy()
+        LeagueFrame(
+            self, 
+            self.current_teams, 
+            double_round=self.current_double_round, 
+            on_show_team_detail=self._show_team_detail
+        ).pack(fill="both", expand=True)
 
 if __name__ == "__main__":
     random.seed()  # inizializza da sistema
