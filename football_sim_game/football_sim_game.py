@@ -116,6 +116,84 @@ def generate_double_round_robin(teams: List[Team]) -> List[List[Match]]:
     full_schedule = rounds_first_leg + rounds_second_leg
     return full_schedule
 
+def _team_sequence(schedule: List[List[Match]], team_name: str) -> list:
+    """Ritorna la sequenza (True=Casa, False=Trasferta) per team_name su tutte le giornate."""
+    seq = []
+    for round_matches in schedule:
+        found = False
+        for m in round_matches:
+            if m.home.name == team_name:
+                seq.append(True)
+                found = True
+                break
+            if m.away.name == team_name:
+                seq.append(False)
+                found = True
+                break
+        if not found:
+            # se c'è 'Riposo' potremmo trovare round senza la squadra: aggiungiamo None
+            seq.append(None)
+    return seq
+
+def _violations_for_team(schedule: List[List[Match]], team_name: str) -> int:
+    """Conta quante volte la squadra ha due giornate consecutive nello stesso campo."""
+    seq = _team_sequence(schedule, team_name)
+    cnt = 0
+    prev = None
+    for s in seq:
+        if prev is not None and s is not None and s == prev:
+            cnt += 1
+        prev = s
+    return cnt
+
+def minimize_home_away_violations(schedule: List[List[Match]], max_passes: int = 20) -> List[List[Match]]:
+    """
+    Riduce le ripetizioni casa/casa o trasferta/trasferta con un greedy pass.
+    Se lo schedule è doppio (andata+ritorno) mantiene la relazione "mirror" tra
+    prima e seconda metà (cioè mantiene la corrispondenza dei match invertiti).
+    """
+    total_rounds = len(schedule)
+    # Se è doppio, la seconda metà è il mirror della prima
+    mid = total_rounds // 2 if total_rounds % 2 == 0 else None
+
+    for _ in range(max_passes):
+        improved = False
+        # Itera solo sulla prima metà se esiste la seconda (per aggiornare mirror insieme)
+        rounds_to_scan = range(mid) if mid is not None else range(total_rounds)
+
+        for r in rounds_to_scan:
+            for j, m in enumerate(schedule[r]):
+                team_a = m.home.name
+                team_b = m.away.name
+
+                before = _violations_for_team(schedule, team_a) + _violations_for_team(schedule, team_b)
+
+                # prova a invertire questa partita (e il mirror se presente)
+                # 1) inverto match nella giornata r
+                m.home, m.away = m.away, m.home
+
+                # 2) se esiste mirror (double round), imposto il match corrispondente come l'inverso
+                mirror = None
+                if mid is not None:
+                    mirror = schedule[r + mid][j]
+                    # mirror deve essere opposto rispetto a m
+                    mirror.home, mirror.away = m.away, m.home
+
+                after = _violations_for_team(schedule, team_a) + _violations_for_team(schedule, team_b)
+
+                if after < before:
+                    improved = True  # teniamo la modifica
+                else:
+                    # revert
+                    m.home, m.away = m.away, m.home
+                    if mirror is not None:
+                        mirror.home, mirror.away = mirror.away, mirror.home
+
+        if not improved:
+            break
+
+    return schedule
+
 def generate_single_round_robin(teams: List[Team]) -> List[List[Match]]:
     full_schedule = generate_double_round_robin(teams)[:len(teams)-1]
     return full_schedule
@@ -348,6 +426,17 @@ Pareggi: {draws_5}
 Sconfitte: {losses_5}
 Punti: {wins_5*3 + draws_5}/15"""
 
+                # Aggiungi i risultati delle ultime 5 partite
+                form += "\n\nRISULTATI ULTIME PARTITE:\n"
+                recent_matches = []
+                for round_matches in self.schedule:
+                    for m in round_matches:
+                        if m.played and (m.home == self.team or m.away == self.team):
+                            recent_matches.append(m)
+                recent_matches = recent_matches[-5:]
+                for m in recent_matches:
+                    form += f"{m.result_text()}\n"
+
         self.form_text.insert(1.0, form)
         self.form_text.configure(state="disabled")
 
@@ -355,7 +444,7 @@ Punti: {wins_5*3 + draws_5}/15"""
         self.fixtures_text.configure(state="normal")
         self.fixtures_text.delete(1.0, tk.END)
         
-        fixtures = "CALENDARIO\n\n"
+        fixtures = "PROSSIME PARTITE\n\n"
         
         # Trova tutte le partite della squadra
         remaining_matches = []
@@ -367,8 +456,11 @@ Punti: {wins_5*3 + draws_5}/15"""
                     location = "Casa" if is_home else "Trasferta"
                     remaining_matches.append((round_idx + 1, opponent, location))
         
+                # Ordina per giornata
+        remaining_matches.sort(key=lambda x: x[0])
         for giornata, opponent, location in remaining_matches:
             fixtures += f"Giornata {giornata}: vs {opponent.name} ({location})\n"
+
 
         self.fixtures_text.insert(1.0, fixtures)
         self.fixtures_text.configure(state="disabled")
@@ -553,6 +645,8 @@ class LeagueFrame(ttk.Frame):
             self.schedule = generate_double_round_robin(self.teams)
         else:
             self.schedule = generate_single_round_robin(self.teams)
+        # Riduce le ripetizioni casa/casa o trasferta/trasferta (heuristic)
+        self.schedule = minimize_home_away_violations(self.schedule, max_passes=30)
         self.current_round = 0
         self._build()
         self._refresh_all()
@@ -756,41 +850,42 @@ class App(tk.Tk):
             t.reset_stats()
         for w in self.winfo_children():
             w.destroy()
-        LeagueFrame(
+
+        # Salviamo il LeagueFrame in un attributo, così lo possiamo riusare
+        self.league_frame = LeagueFrame(
             self, 
             teams, 
             double_round=double_round, 
             on_show_team_detail=self._show_team_detail
-        ).pack(fill="both", expand=True)
+        )
+        self.league_frame.pack(fill="both", expand=True)
 
     def _show_team_detail(self, team: Team):
         """Mostra la schermata dettaglio per una squadra specifica."""
-        for w in self.winfo_children():
-            w.destroy()
-        
-        # Ricostruisci il calendario per passarlo al dettaglio
-        if self.current_double_round:
-            schedule = generate_double_round_robin(self.current_teams)
-        else:
-            schedule = generate_single_round_robin(self.current_teams)
-            
-        TeamDetailFrame(
-            self, 
-            team, 
-            schedule, 
+        # Nascondi (non distruggere) il LeagueFrame esistente
+        if hasattr(self, "league_frame") and self.league_frame.winfo_exists():
+            self.league_frame.pack_forget()
+
+        # Crea e mostra il frame di dettaglio, usando IL CALENDARIO ESISTENTE
+        self.detail_frame = TeamDetailFrame(
+            self,
+            team,
+            self.league_frame.schedule,   # usa lo schedule attuale con lo stato delle partite
             on_back=self._return_to_league
-        ).pack(fill="both", expand=True)
+        )
+        self.detail_frame.pack(fill="both", expand=True)
 
     def _return_to_league(self):
-        """Torna alla schermata principale del campionato."""
-        for w in self.winfo_children():
-            w.destroy()
-        LeagueFrame(
-            self, 
-            self.current_teams, 
-            double_round=self.current_double_round, 
-            on_show_team_detail=self._show_team_detail
-        ).pack(fill="both", expand=True)
+        """Torna alla schermata principale del campionato senza perdere lo stato."""
+        # Chiudi solo il dettaglio, se presente
+        if hasattr(self, "detail_frame") and self.detail_frame.winfo_exists():
+            self.detail_frame.destroy()
+
+        # Ri-mostra il LeagueFrame esistente (stato intatto: current_round, schedule, ecc.)
+        if hasattr(self, "league_frame") and self.league_frame.winfo_exists():
+            self.league_frame.pack(fill="both", expand=True)
+            # opzionale: aggiornare UI se necessario
+            self.league_frame._refresh_all()
 
 if __name__ == "__main__":
     random.seed()  # inizializza da sistema
