@@ -1,2 +1,5 @@
 /football_sim_game/leagues/
 /football_sim_game/notes.md
+/stack_agent/.venv_stack_agent/
+/stack_agent/data/
+.DS_Store
