@@ -13,9 +13,10 @@ query_table = pd.read_parquet(os.path.join(PARQUET_DIR, "query_table.parquet"))
 
 logging.info("Data loaded")
 
-# --------------------
-# CHUNKING
-# --------------------
+# take a random sample (adjust n)
+SAMPLE_SIZE = 50000
+query_table = query_table.sample(n=SAMPLE_SIZE, random_state=42)
+logging.info(f"Sampled {len(query_table)} rows")
 
 # create combined list for corpus: merge title, question_body, answer_body, and tags
 # (for smaller datasets, add this as a column to the dataframe)
@@ -29,9 +30,15 @@ texts = (
 logging.info(f"Number of documents before chunking: {len(texts)}")
 
 # create text splitter
+#text_splitter = RecursiveCharacterTextSplitter(
+#    chunk_size=500, # max dimension of each chunk
+#    chunk_overlap=50, # overlap between chunks for context
+#)
+
+# create text splitter with larger chunks → fewer total embeddings
 text_splitter = RecursiveCharacterTextSplitter(
-    chunk_size=500, # max dimension of each chunk
-    chunk_overlap=50, # overlap between chunks for context
+    chunk_size=1000,
+    chunk_overlap=100,
 )
 
 documents = []
