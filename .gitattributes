@@ -1,0 +1,1 @@
+stackqa_rag_agent/data/chroma_db/chroma.sqlite3 filter=lfs diff=lfs merge=lfs -text

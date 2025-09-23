@@ -1,5 +1,5 @@
 /football_sim_game/leagues/
-/football_sim_game/notes.md
-/stack_agent/.venv_stack_agent/
-/stack_agent/data/
+/stackqa_rag_agent/data/raw/
+/stackqa_rag_agent/data/parquet/
+/stackqa_rag_agent/models/
 .DS_Store
