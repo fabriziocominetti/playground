@@ -1,0 +1,172 @@
+---
+title: "EDA calcio"
+output: html_document
+date: '2022-03-09'
+---
+
+# Setup
+
+```{r}
+# getwd() to identify working directory
+```
+
+Read the CSV file
+
+```{r}
+calcio <- read.table("data/calcio.csv", header = TRUE, sep = ",")
+```
+
+```{r}
+dim(calcio)
+```
+
+```{r}
+head(calcio)
+```
+```{r}
+tail(calcio)
+```
+
+To sum up, this dataset contains seven variables. Each row is a football match of the "Serie A", the italian primary league, from 2008 to 2015.
+
+The variables "Date", "HomeTeam", and "AwayTeam" are self-explanatory.
+
+The variable "FTR" means "Full TIme Result" and it indicates whether the match has been won by the home team, the away team, or if it ended in a draw.
+
+Finally, the variables "B365H", "B365D", and "B365A" indicate the odds of the betting company named "Bet365 Group Ltd" relative to the three events, obviously before the start of the match.
+
+# Data Manipulation
+
+Now we can observe and access the columns' names.
+
+```{r}
+colnames(calcio)
+```
+
+Let's explore the variables types.
+
+```{r}
+str(calcio)
+```
+
+Quantitative variables are codified in R as 'integer' (discrete) or 'numeric' (continuous).
+
+Qualitative variables are codified in R as 'character' (text string) or 'factor' (repeated values).
+
+Dates are codified in R as 'Date'.
+
+```{r}
+print(is.numeric(calcio$B365H))
+print(is.numeric(calcio$Date))
+```
+
+```{r}
+class(calcio$B365D)
+```
+
+```{r}
+# first elements in a vector
+calcio$FTR[1:10]
+```
+
+We need to convert the following variables to factor.
+
+```{r}
+calcio$HomeTeam <- factor(calcio$HomeTeam)
+calcio$AwayTeam <- factor(calcio$AwayTeam)
+calcio$FTR <- factor(calcio$FTR)
+```
+
+Alternatively, we could've added the option "stringsAsFactors = TRUE" inside the read.table function.
+
+```{r}
+class(calcio$HomeTeam)
+```
+
+```{r}
+# to access the modalities of a factor variable
+levels(calcio$HomeTeam)
+```
+
+```{r}
+# to rename modalities
+# levels(calcio$FTR) <- c("Away", "Draw", "Home")
+```
+
+```{r}
+calcio$Date <- as.Date(calcio$Date, format = "%Y-%m-%d")
+class(calcio$Date)
+```
+
+```{r}
+print(min(calcio$Date))
+print(max(calcio$Date))
+```
+
+Select only draws in a new df.
+
+```{r}
+calcio_draw <- calcio[calcio$FTR == "D", ]
+head(calcio_draw)
+```
+
+Select the matches where the Home team has a low probability of winning the match.
+
+```{r}
+calcio_homeLow <- calcio[calcio$B365H > 9, ]
+calcio_homeLow
+```
+
+Detect missing values.
+
+```{r}
+calcio[rowSums(is.na(calcio)) > 0, ]
+```
+
+The above function tells us how many values are missing in each row.
+
+```{r}
+# to remove missing values from df
+# calcio_noNA <- na.omit(calcio)
+```
+
+Subsetting for the matches where the Home team has a low probability of winning the match.
+
+```{r}
+calcio_homeLow <- subset(calcio, subset = B365H > 9)
+calcio_homeLow
+```
+
+Subset remove missing values. Subset can select rows and/or columns.
+
+# Bonus
+
+In the soccer bets the quotas represent the inverse of the probability of a event, for which
+
+$(Probability Of The Event) = 1 / (Share Of The Event)$
+
+The quota also represents the amount in € that the winner receives against the payment of the unit amount of € 1.
+
+If the bet were fair, the odds of winning, drawing and losing would have to add up to 1.
+
+However, this does not happen: the odds obtained add up to a value > 1.
+
+This discrepancy is called bookmaking or premium and guarantees the bank a profit. (in italian "allibramento" o "aggio")
+
+```{r}
+calcio$premium <- 1 / calcio$B365H + 1 / calcio$B365D + 1 / calcio$B365A - 1
+```
+
+```{r}
+subset(calcio, HomeTeam == "Milan")
+```
+
+```{r}
+calcio[which.min(calcio$premium), ]
+calcio[which.max(calcio$premium), ]
+```
+
+```{r}
+calcio09_10 <- subset(calcio, Date <= "2009-08-15" & Date <= "2010-06-15")
+calcio09_10[which.max(calcio09_10$premium), ]
+```
