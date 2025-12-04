@@ -1,6 +1,6 @@
 1. Open Ubuntu
 
-wget https://raw.githubusercontent.com/fabriziocominetti/practice/main/shell-f1/data/f1_T2021.csv
+wget https://raw.githubusercontent.com/fabriziocominetti/practice/main/shell_F1/data/f1_T2021.csv
 
 ls
 
