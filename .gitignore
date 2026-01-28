@@ -1,6 +1,11 @@
+.venv/
+__pycache__/
+
 /football_sim_game/leagues/
 /stackqa_rag_agent/data/raw/
 /stackqa_rag_agent/data/parquet/
 /stackqa_rag_agent/models/
-
 /archive/billboard-hot100/*.twb
+
+.env
+prompt.txt
