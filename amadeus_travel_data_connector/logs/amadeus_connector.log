@@ -1,0 +1,6 @@
+2026-01-28 17:37:10,927 INFO Fetching flights: LON -> PAR on 2026-01-29
+2026-01-28 17:37:13,177 INFO Fetching hotels: PAR 2026-01-29 to 2026-01-31
+2026-01-28 17:37:13,819 INFO Found 5 hotels.
+2026-01-28 17:37:14,847 INFO Fetched 3 hotel offers
+2026-01-28 17:37:14,861 INFO Merged 5 flights with 3 hotels. Result: 15 packages.
+2026-01-28 17:37:14,862 INFO Summary report generated: {'average_package_price': np.float64(730.9506666666665), 'min_package_price': np.float64(94.47), 'max_package_price': np.float64(1722.47), 'total_packages': 15, 'unique_flights': 3, 'unique_hotels': 3, 'available_dates': 1}
