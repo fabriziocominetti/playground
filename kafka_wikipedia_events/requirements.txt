@@ -1,0 +1,4 @@
+kafka-python-ng
+sseclient-py
+psycopg2-binary
+requests
