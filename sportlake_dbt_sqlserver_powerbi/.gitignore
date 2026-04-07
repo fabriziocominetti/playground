@@ -1,0 +1,8 @@
+.venv/
+__pycache__/
+*.pyc
+
+# dbt compilation run files
+sportlake_dbt/target/
+sportlake_dbt/logs/
+sportlake_dbt/dbt_packages/

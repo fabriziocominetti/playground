@@ -1,0 +1,10 @@
+version: 2
+
+sources:
+  - name: sportlake_raw
+    database: sportlake_db
+    schema: dbo
+    tables:
+      - name: raw_customers
+      - name: raw_ticketing
+      - name: raw_ecommerce
