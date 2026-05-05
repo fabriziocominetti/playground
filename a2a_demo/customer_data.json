@@ -1,0 +1,12 @@
+{
+  "customers": [
+    {
+      "user_id": "USR-8899",
+      "name": "Mario Rossi",
+      "loyalty_discount": 0.1,
+      "shipping_address": "Via Roma 1, Milan, Italy",
+      "payment_method": "Visa **** 1234",
+      "email": "mario.rossi@example.com"
+    }
+  ]
+}

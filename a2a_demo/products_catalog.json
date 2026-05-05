@@ -1,0 +1,129 @@
+{
+  "sector": "Consumer Electronics - Personal Computing & Mobile",
+  "products": [
+    {
+      "sku": "SP-ENT-101",
+      "name": "NovaPhone Lite (Entry Level)",
+      "price": 199.00,
+      "currency": "EUR",
+      "location": "https://cdn.examplestore.com/images/products/SP-ENT-101.jpg",
+      "description": "The perfect smartphone for everyday tasks. Reliable performance and long-lasting battery for social media and calls.",
+      "specifications": {
+        "display": "6.1-inch LCD HD+",
+        "processor": "Octa-core 2.0GHz",
+        "storage": "64GB (expandable)",
+        "ram": "4GB",
+        "battery": "5000mAh (up to 2 days)"
+      }
+    },
+    {
+      "sku": "SP-MID-201",
+      "name": "NovaPhone X1 (Standard)",
+      "price": 449.00,
+      "currency": "EUR",
+      "location": "https://cdn.examplestore.com/images/products/SP-MID-201.jpg",
+      "description": "Our best-seller. A perfect balance of photography and speed, featuring a stunning OLED display and 5G connectivity.",
+      "specifications": {
+        "display": "6.5-inch OLED 120Hz",
+        "processor": "Snapdragon 7-Series",
+        "camera": "50MP Main + 12MP Ultra-Wide",
+        "ram": "8GB",
+        "battery": "4500mAh with 33W Fast Charge"
+      }
+    },
+    {
+      "sku": "TB-PRO-301",
+      "name": "TabStream X1 Pro (Advanced)",
+      "price": 729.00,
+      "currency": "EUR",
+      "location": "https://cdn.examplestore.com/images/products/TB-PRO-301.jpg",
+      "description": "Designed for content creators and professionals. Supports stylus input and heavy multitasking with ease.",
+      "specifications": {
+        "display": "11-inch Liquid Retina 120Hz",
+        "processor": "Neural-Link Gen 2",
+        "storage": "256GB",
+        "connectivity": "Wi-Fi 6E + Optional 5G",
+        "battery": "Up to 12 hours of video playback"
+      }
+    },
+    {
+      "sku": "PC-ULT-401",
+      "name": "ApexBook Ultra 14 (Premium)",
+      "price": 1499.00,
+      "currency": "EUR",
+      "location": "https://cdn.examplestore.com/images/products/PC-ULT-401.jpg",
+      "description": "The pinnacle of mobile computing. Extreme performance in an ultra-slim aeronautical-grade aluminum chassis.",
+      "specifications": {
+        "processor": "Core i9 / M3 Max Equivalent",
+        "ram": "32GB LPDDR5x",
+        "storage": "1TB NVMe SSD",
+        "display": "14-inch 4K OLED HDR",
+        "battery": "99Wh with 100W USB-C PD"
+      }
+    },
+    {
+      "sku": "ACC-PROT-01",
+      "name": "Urban Shield Laptop Kit",
+      "price": 45.00,
+      "currency": "EUR",
+      "location": "https://cdn.examplestore.com/images/products/ACC-PROT-01.jpg",
+      "description": "Specific protection set for laptops. Includes a water-resistant sleeve and a tempered glass screen protector.",
+      "specifications": {
+        "content": "Shockproof sleeve, 14-inch screen protector, microfiber cloth",
+        "compatibility": "ApexBook series and most 14-inch laptops"
+      }
+    },
+    {
+      "sku": "ACC-HUB-03",
+      "name": "Extreme Connectivity Dock",
+      "price": 85.00,
+      "currency": "EUR",
+      "location": "https://cdn.examplestore.com/images/products/ACC-HUB-03.jpg",
+      "description": "A comprehensive 10-in-1 USB-C hub designed for power users. Includes dual 4K HDMI outputs and high-speed data transfer.",
+      "specifications": {
+        "ports": "2x HDMI 4K, 3x USB 3.2, 1x Ethernet, SD/TF slots, 100W PD",
+        "material": "Heat-dissipating aluminum",
+        "compatibility": "All USB-C / Thunderbolt devices"
+      }
+    },
+    {
+      "sku": "ACC-SSD-256",
+      "name": "SwiftDrive 256GB External SSD",
+      "price": 59.00,
+      "currency": "EUR",
+      "location": "https://cdn.examplestore.com/images/products/ACC-SSD-256.jpg",
+      "description": "Reliable everyday portable storage, perfect for moving documents and photo libraries quickly.",
+      "specifications": {
+        "capacity": "256GB",
+        "interface": "USB 3.2 Gen 1",
+        "read_speed": "up to 550MB/s"
+      }
+    },
+    {
+      "sku": "ACC-SSD-1TB",
+      "name": "SwiftDrive 1TB Extreme NVMe",
+      "price": 128.00,
+      "currency": "EUR",
+      "location": "https://cdn.examplestore.com/images/products/ACC-SSD-1TB.jpg",
+      "description": "Ultra-high-speed external storage certified for direct 4K video editing and large database backups.",
+      "specifications": {
+        "capacity": "1TB",
+        "interface": "USB-C 3.2 Gen 2x2",
+        "read_speed": "up to 2000MB/s"
+      }
+    },
+    {
+      "sku": "ACC-STN-02",
+      "name": "VistaRise Ergonomic Stand",
+      "price": 35.00,
+      "currency": "EUR",
+      "location": "https://cdn.examplestore.com/images/products/ACC-STN-02.jpg",
+      "description": "Lightweight aluminum stand with 6 adjustable angles, ideal for improving posture and laptop cooling.",
+      "specifications": {
+        "max_load": "10kg",
+        "weight": "250g",
+        "material": "Aeronautical aluminum"
+      }
+    }
+  ]
+}
